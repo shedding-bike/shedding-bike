@@ -17,6 +17,15 @@
         </i>
       </span>
       <a href="{{ .Permalink }}">{{ .Title }}</a>
+	  <span>
+		–
+		{{ $numauthors := len .Params.authors | add -1 }}		
+		{{- range $index, $elem :=  .Params.authors }}
+		{{- with $.Site.GetPage "taxonomyTerm" (printf "authors/%s" (urlize .)) }}
+		<a href="{{ .Permalink }}">{{ .Params.name }}</a>{{ if lt $index $numauthors }}<span>,</span>{{ end }}					   
+		{{ end }}
+		{{ end }}
+	  </span>
     </li>
     {{ else }}
     <li>

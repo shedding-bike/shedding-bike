@@ -55,3 +55,8 @@ home = ['html']
 section = ['html']
 taxonomy = ['html']
 term = ['html']
+
+[taxonomies]
+  author = "authors"
+  tag = "tags"
+  category = "categories"

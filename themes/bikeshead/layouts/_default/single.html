@@ -7,11 +7,25 @@
       {{ .Date.Format (default "02 Jan, 2006" .Site.Params.dateFormat) }}
     </time>
   </i>
+
+  <span>
+	| 
+	{{ $numauthors := len .Params.authors | add -1 }}		
+	{{- range $index, $elem :=  .Params.authors }}
+	{{- with $.Site.GetPage "taxonomyTerm" (printf "authors/%s" (urlize .)) }}
+	<a href="{{ .Permalink }}">{{ .Params.name }}</a>{{ if lt $index $numauthors }}<span>,</span>{{ end }}					   
+	{{ end }}
+	{{ end }}
+  </span>
+  
 </p>
 {{ end }}{{ end }}
+
+
 <content>
   {{ .Content }}
 </content>
+
 <p>
   {{ range (.GetTerms "tags") }}
   <a href="{{ .Permalink }}">#{{ .LinkTitle | lower }}</a>
