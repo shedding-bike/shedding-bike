@@ -3,7 +3,7 @@
 baseURL = "https://shedding.bike"
 
 # The name of this wonderful theme ;-).
-theme = 'hugo-bearblog'
+theme = 'bikeshead'
 
 # Basic metadata configuration for your blog.
 title = "shedding.bike"
