@@ -1,13 +1,23 @@
 {{ define "title" }}404{{ end }}
 {{ define "main" }}
 
-{{ $item := slice "<code>bus error</code>"
-                  "<code>ENOENT</code>"
-                  "<mjx-container class=\"MathJax CtxtMenu_Attached_0\" jax=\"CHTML\" style=\"font-size: 121.2%; position: relative;\" tabindex=\"0\" ctxtmenu_counter=\"12\"><mjx-math class=\"MJX-TEX\" aria-hidden=\"true\"><mjx-mi class=\"mjx-n\"><mjx-c class=\"mjx-c2204\"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable=\"on\" display=\"inline\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi mathvariant=\"normal\">∄</mi></math></mjx-assistive-mml></mjx-container>"
-           | shuffle }}
-
 <br><br>
 
-<h1 style="text-align: center">{{index $item 0 | safeHTML}}</h1>
+<h1 id="404-mountpoint" style="text-align: center"></h1>
+
+<script>
+    /// this allows website XSS injection possible, so this array should not
+    // contain anything except bare strings (i.e. don't use variables)
+    let res = [
+        "<code>bus error</code>",
+        "<code>ENOENT</code>",
+        "<mjx-container class=\"MathJax CtxtMenu_Attached_0\" jax=\"CHTML\" style=\"font-size: 121.2%; position: relative;\" tabindex=\"0\" ctxtmenu_counter=\"12\"><mjx-math class=\"MJX-TEX\" aria-hidden=\"true\"><mjx-mi class=\"mjx-n\"><mjx-c class=\"mjx-c2204\"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable=\"on\" display=\"inline\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi mathvariant=\"normal\">∄</mi></math></mjx-assistive-mml></mjx-container>"
+    ];
+    const randomElement = res[Math.floor(Math.random() * res.length)];
+    $("#404-mountpoint").html(randomElement);
+</script>
+
+
+
 
 {{ end }}
