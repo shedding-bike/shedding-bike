@@ -3,4 +3,6 @@
 {{ with .Site.GetPage "/blog" }}
 <a href="{{ "blog" | relURL }}">
   <i class="fas fa-pen-to-square" aria-hidden="true"></i></a>
+<a href="{{ "blog/index.xml" | relURL }}">
+  <i class="fas fa-rss" aria-hidden="true"></i></a>
 {{ end }}

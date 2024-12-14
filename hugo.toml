@@ -8,7 +8,6 @@ theme = 'bikeshead'
 # Basic metadata configuration for your blog.
 title = "shedding.bike"
 author = "shedding.bike"
-copyright = "I am bikeshedding"
 languageCode = "en-US"
 
 # Generate a nice robots.txt for SEO
@@ -50,3 +49,9 @@ ignoreErrors = ["error-disable-taxonomy"]
   # for details. An example TOML config that uses [ISO
   # 8601](https://en.wikipedia.org/wiki/ISO_8601) format:
   # dateFormat = "2006-01-02"
+
+[outputs]
+home = ['html']
+section = ['html']
+taxonomy = ['html']
+term = ['html']
