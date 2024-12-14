@@ -1,6 +1,7 @@
 {{ define "main" }}
 {{ if eq .Type "blog" }}{{ if not .Params.menu }}
-<h1>{{ .Title }}</h1>
+
+<h1 style="margin-top: 0.75em">{{ .Title }}</h1>
 <p>
   <i>
     <time datetime='{{ .Date.Format "2006-01-02" }}' pubdate>
@@ -13,7 +14,7 @@
 	{{ $numauthors := len .Params.authors | add -1 }}		
 	{{- range $index, $elem :=  .Params.authors }}
 	{{- with $.Site.GetPage "taxonomyTerm" (printf "authors/%s" (urlize .)) }}
-	<a href="{{ .Permalink }}">{{ .Params.name }}</a>{{ if lt $index $numauthors }}<span>,</span>{{ end }}					   
+	<a href="{{ .Permalink }}">{{ .Params.name | lower }}</a>{{ if lt $index $numauthors }}<span>,</span>{{ end }}
 	{{ end }}
 	{{ end }}
   </span>
