@@ -1,0 +1,117 @@
+<!doctype html><html lang=en-US><head><meta http-equiv=X-Clacks-Overhead content="GNU Terry Pratchett"><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://shedding.bike/images/favicon.png><title>Stack Safety and CPS In Common Lisp | shedding.bike</title>
+<meta name=title content="Stack Safety and CPS In Common Lisp"><meta name=description content="Editor&rsquo;s note: this is a translation of a Common Lisp file I sent to my
+sister one day a couple months ago when she was asking why her Emacs Lisp function
+was hitting a recursion limit. I was fresh off of CPS lab and proceeded to nerd
+out. Also, any hate of setf in here is a comedic exaggeration.
+This is a very simple tour of using Common Lisp to write some simple factorial
+and is-even functions. If you&rsquo;re new to functional programming or Lisp you might
+find it interesting, but this is mostly to test out this website."><meta name=keywords content="lisp,"><meta property="og:url" content="https://shedding.bike/stack-safety-and-cps-in-common-lisp/"><meta property="og:site_name" content="shedding.bike"><meta property="og:title" content="Stack Safety and CPS In Common Lisp"><meta property="og:description" content="Editor’s note: this is a translation of a Common Lisp file I sent to my sister one day a couple months ago when she was asking why her Emacs Lisp function was hitting a recursion limit. I was fresh off of CPS lab and proceeded to nerd out. Also, any hate of setf in here is a comedic exaggeration.
+This is a very simple tour of using Common Lisp to write some simple factorial and is-even functions. If you’re new to functional programming or Lisp you might find it interesting, but this is mostly to test out this website."><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="article:section" content="blog"><meta property="article:published_time" content="2024-03-18T00:00:00+00:00"><meta property="article:modified_time" content="2024-03-18T00:00:00+00:00"><meta property="article:tag" content="Lisp"><meta name=twitter:card content="summary"><meta name=twitter:title content="Stack Safety and CPS In Common Lisp"><meta name=twitter:description content="Editor’s note: this is a translation of a Common Lisp file I sent to my sister one day a couple months ago when she was asking why her Emacs Lisp function was hitting a recursion limit. I was fresh off of CPS lab and proceeded to nerd out. Also, any hate of setf in here is a comedic exaggeration.
+This is a very simple tour of using Common Lisp to write some simple factorial and is-even functions. If you’re new to functional programming or Lisp you might find it interesting, but this is mostly to test out this website."><meta itemprop=name content="Stack Safety and CPS In Common Lisp"><meta itemprop=description content="Editor’s note: this is a translation of a Common Lisp file I sent to my sister one day a couple months ago when she was asking why her Emacs Lisp function was hitting a recursion limit. I was fresh off of CPS lab and proceeded to nerd out. Also, any hate of setf in here is a comedic exaggeration.
+This is a very simple tour of using Common Lisp to write some simple factorial and is-even functions. If you’re new to functional programming or Lisp you might find it interesting, but this is mostly to test out this website."><meta itemprop=datePublished content="2024-03-18T00:00:00+00:00"><meta itemprop=dateModified content="2024-03-18T00:00:00+00:00"><meta itemprop=wordCount content="1203"><meta itemprop=keywords content="Lisp"><meta name=referrer content="no-referrer-when-downgrade"><link rel=stylesheet href=https://latex.vercel.app/style.css><script id=MathJax-script async src=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin=anonymous></script><script src=https://kit.fontawesome.com/416511d784.js crossorigin=anonymous></script><link rel=stylesheet href=https://latex.vercel.app/prism/prism.css><script src=https://quantumi.sh/public/prism.js></script><style>.title{margin-bottom:5px}</style></head><body><header><h2 class=title>shedding.bike</h2><nav><a href=/><i class="fas fa-house" aria-hidden=true></i></a>
+<a href=/blog><i class="fas fa-pen-to-square" aria-hidden=true></i></a>
+<a href=/blog/index.xml><i class="fas fa-rss" aria-hidden=true></i></a></nav></header><main><h1 style=margin-top:.75em>Stack Safety and CPS In Common Lisp</h1><p><i><time datetime=2024-03-18 pubdate>18 Mar, 2024
+</time></i><span>|
+<a href=https://shedding.bike/authors/david/>david</a></span></p><content><p><strong>Editor&rsquo;s note</strong>: this is a translation of a Common Lisp file I sent to my
+sister one day a couple months ago when she was asking why her Emacs Lisp function
+was hitting a recursion limit. I was fresh off of CPS lab and proceeded to nerd
+out. Also, any hate of <code>setf</code> in here is a comedic exaggeration.</p><p>This is a very simple tour of using Common Lisp to write some simple factorial
+and is-even functions. If you&rsquo;re new to functional programming or Lisp you might
+find it interesting, but this is mostly to test out this website.</p><hr><p>You&rsquo;re likely already aware that when you call a function, a &ldquo;stack frame&rdquo;
+containing the memory needed for its local variables and such is pushed to
+a processes&rsquo; stack and then popped when the function returns (this way it
+preserves the state of the function that calls another function).</p><p>The consequence of this is that the deeper a recursion goes, the more memory
+is (traditionally) needed! This sorta sucks since there&rsquo;s plenty of regular
+recursive algorithms that we would like to work.</p><p>One observation we can make is that we don&rsquo;t need to preserve the state of
+a parent function if the recursive call is the <em>last</em> thing we do (there&rsquo;s
+nothing to come back to!). This is called &ldquo;tail recursion&rdquo; and we can perform
+&ldquo;tail call optimization&rdquo; here by replacing the current stack frame with the
+new one when we recurse instead of pushing a new stack frame (since we don&rsquo;t
+need to come back to the old function!)</p><p>Many languages sadly do not do this optimization (e.g. only some lisps like
+SBCL do it). Let&rsquo;s see an example with a factorial function.</p><pre><code class=language-lisp>(defun bad-factorial (x)
+  (if (zerop x) 1
+      (* x (bad-factorial (- x 1)))))
+</code></pre><p>This is equivalent to <code>n * fact (n-1)</code> which is problematic because we need to
+do something with the result of the recursion.</p><p>Calling this will murder SBCL!</p><pre><code class=language-text>CL-USER&gt; (bad-factorial 500004)
+Error: Control stack exhausted (no more space for function call frames).
+</code></pre><p>Anyways this is slow because it&rsquo;s not a tail call: we do multiplication
+after the recursion and so we need to preserve the previous stack frames.</p><p>One way of fixing this would be to add an accumulator argument like so:</p><pre><code class=language-lisp>(defun tail-factorial (x &amp;optional (acc 1))
+  (if (zerop x) acc
+      (tail-factorial (- x 1) (* acc x))))
+</code></pre><p>This won&rsquo;t murder SBCL because it can reuse stack frames!</p><pre><code class=language-lisp>(tail-factorial 50004)
+</code></pre><p>It isn&rsquo;t always easy to write tail recursive functions though. Let&rsquo;s think
+about a slightly harder problem: a tail recursive is-even function! As usual
+we&rsquo;ll start with a bad implementation that will murder your stack:</p><pre><code class=language-lisp>(defun bad-is-even (x)
+  (case x
+    (0 t)
+    (1 nil)
+    (otherwise (not (bad-is-even (- x 1))))))
+</code></pre><p>Except we can&rsquo;t exactly add a nice accumulator argument (at least I don&rsquo;t
+think so) since without modulo (cheating here) we can&rsquo;t work backwards
+(we could earlier because multiplication is commutative) and our computation
+must be done when coming back out of all the recursions. This is explained
+a little weirdly but try and think through on your own why you can&rsquo;t use the
+same strategy as before here.</p><p>There are some clever tricks we can do though! The first is being clever about
+some &ldquo;mutual recursion&rdquo; in which we define two recursive functions <code>even</code> and
+<code>odd</code> that call each other. Sidenote: these are still tail calls because the
+recursion is the last thing that happens!</p><pre><code class=language-lisp>(defun odd (x)
+  (if (= x 0) nil (even (- x 1))))
+
+(defun even (x)
+  (if (= x 0) t (odd (- x 1))))
+</code></pre><p>By using two functions we&rsquo;ve nicely dodged our earlier problems. This is not
+a generally applicable solution though, and by now you might despair that most
+functions are not expressible as a tail recursive function. Yet this is not the
+case! Observe the glory of Continuation Passing Style (what I was working on in
+my functional programming pset all of last week).</p><p>Some background: a continuation passing style function is a tail recursive function
+that additionally takes a lambda function of &ldquo;what to do after this&rdquo; (and calls it
+as a tail call). You can start to build up some sneakiness here by calling more CPS
+functions and build up arbitrary logic. Let&rsquo;s see a simple example with a factorial
+function again:</p><pre><code class=language-lisp> ;; k is &quot;what to do next&quot; - we call k with our result when done
+(defun cps-fact (x k)
+  (if (zerop x) (funcall k 0) 
+      ;; Here we call ourselves again but change the continuation: 
+	  ;; now what we do with the result of this recursive call is
+	  ;; multiply it by x and then pass it to k.
+      (cps-fact (- x 1) (lambda (y) (funcall k (* x y))))))
+</code></pre><p>It&rsquo;ll help to see what this evaluates to for an example input. I use <code>=></code> to indicate
+&ldquo;evaluates to&rdquo; in the following trace (also <code>write-to-string</code> is basically just <code>str()</code>
+from Python but in Lisp.</p><pre><code class=language-text>(cps-fact 3 write-to-string)
+=&gt; (cps-fact 2 (lambda (y) (funcall write-to-string (* 3 y))))
+=&gt; (cps-fact 1 (lambda (z) (funcall (lambda (y) (funcall write-to-string (* 3 y))) (* 2 z))))
+=&gt; (funcall (lambda (z) (funcall (lambda (y) (funcall write-to-string (* 3 y))) (* 2 z))) 1)
+=&gt; (funcall (lambda (y) (funcall write-to-string (* 3 y))) (* 2 1))
+=&gt; (funcall (lambda (y) (funcall write-to-string (* 3 y))) 2)
+=&gt; (funcall write-to-string (* 3 2))
+=&gt; (write-to-string 6)
+=&gt; &quot;6&quot;
+</code></pre><p>Along the way we used nothing but tail calls! Hopefully after some more inspection
+you can sort of see how we&rsquo;ve basically punted all state to these growing lambda
+functions that encode what to do next.</p><p>We can also do this for our <code>is-even</code> function! Here&rsquo;s how it would work:</p><pre><code class=language-lisp>(defun cps-even (x k)
+  (case x
+    (0 (funcall k t))
+    (1 (funcall k nil))
+    (otherwise (cps-even (- x 1) (lambda (y) (funcall k (not y)))))))
+</code></pre><p>Try writing a trace out for yourself. Also we can call the function on big inputs!</p><pre><code class=language-text>(cps-even 100003 'write-to-string)
+(cps-even 100006 'write-to-string)
+</code></pre><p>The cooler thing about continuation passing style is that it can express <em>anything</em>!
+Maybe I&rsquo;ll send you some more complicated examples like what I did in my homework to
+show this, but CPS is a whole style of programming (I wrote a simple SAT solver in SML
+exclusively doing things this way!).</p><p>Anyways, this has been your primer on avoiding stack overflows in functional
+languages. We can also be evil and do this kind of stuff imperatively. We can use
+<code>setf</code> to update variables from let clauses in our factorial function.</p><pre><code class=language-lisp>(defun evil-fact (x)
+  (let ((out 1))
+    (dotimes (_ x)
+      (setf out (* x out)
+            x (- x 1)))
+    out))
+</code></pre><p>Thankfully, Lisp is actually a multi-paradigm language and so if functional ever starts
+being a chore you can always just not bother.</p><p>Alternatively we can channel the dark arts of the loop macro:</p><pre><code class=language-lisp>(defun loop-fact (x)
+  (loop with out = 1
+        for i from 2 to x
+        do (setf out (* out i))
+        finally (return out)))
+</code></pre><p>Or if we like loop (it&rsquo;s actually the only clean <code>range()</code> equivalent) and hate <code>setf</code>
+we could do a more functional implementation with reduce:</p><pre><code class=language-lisp>(defun other-loop-fact (x)
+  (reduce '* (loop for i from 1 to x collect i)))
+</code></pre></content><p><a href=https://shedding.bike/blog/lisp/>#lisp</a></p></main><footer></footer></body></html>
