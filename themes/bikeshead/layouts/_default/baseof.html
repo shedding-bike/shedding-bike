@@ -15,7 +15,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
   <script src="https://kit.fontawesome.com/416511d784.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://latex.vercel.app/prism/prism.css">
-  <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.min.js"></script>
+  <script src="https://quantumi.sh/public/prism.js"></script>
+  <!-- <link rel="https://quantumi.sh/public/prism.css"></script> -->
 
   {{ with .OutputFormats.Get "rss" -}}
   {{ printf `<link rel="%s" type="%s" href="%s" title="%s" />` .Rel .MediaType.Type .Permalink $.Site.Title | safeHTML }}

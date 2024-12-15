@@ -60,3 +60,8 @@ term = ['html']
   author = "authors"
   tag = "tags"
   category = "categories"
+
+[markup]
+  [markup.highlight]
+	noHl = true
+	codeFences = false
