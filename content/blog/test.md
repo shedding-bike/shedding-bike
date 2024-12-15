@@ -1,5 +1,6 @@
 +++
 title = "Stack Safety and CPS In Common Lisp"
+description = "A very simple tour of using Common Lisp to write some simple factorial and is-even functions. If you're new to functional programming or Lisp you might find it interesting, but this is mostly to test out this website."
 date = "2024-03-18"
 tags = [
 	"lisp",
